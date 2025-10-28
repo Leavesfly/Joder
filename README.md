@@ -1,4 +1,4 @@
-# Joder
+# Joder: 一个优雅的 AI 终端构建者
 
 <div align="center">
 
