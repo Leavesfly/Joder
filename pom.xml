@@ -4,19 +4,19 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>io.shareai</groupId>
+    <groupId>io.leavesfly</groupId>
     <artifactId>joder</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
     <name>Joder</name>
-    <description>Java implementation of Kode - AI-powered terminal assistant</description>
+    <description>AI-powered terminal assistant</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        
+
         <!-- Dependency versions -->
         <lanterna.version>3.1.2</lanterna.version>
         <jackson.version>2.16.1</jackson.version>
@@ -176,8 +176,9 @@
                         </goals>
                         <configuration>
                             <transformers>
-                                <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>io.shareai.joder.JoderApplication</mainClass>
+                                <transformer
+                                        implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
+                                    <mainClass>io.leavesfly.joder.JoderApplication</mainClass>
                                     <manifestEntries>
                                         <Implementation-Version>${project.version}</Implementation-Version>
                                         <Multi-Release>true</Multi-Release>

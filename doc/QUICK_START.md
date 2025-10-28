@@ -245,7 +245,7 @@ java -jar target/joder-1.0.0.jar
 #### 使用 Maven
 
 ```bash
-mvn exec:java -Dexec.mainClass="io.shareai.joder.JoderApplication"
+mvn exec:java -Dexec.mainClass="io.leavesfly.joder.JoderApplication"
 ```
 
 #### 使用启动脚本
@@ -409,10 +409,10 @@ print(f"Hello, World! 当前时间：{datetime.now()}")
 [AI 调用 grep 工具]
 🔍 找到 5 个匹配项：
 
-📄 src/main/java/io/shareai/joder/tools/ToolRegistry.java:42
+📄 src/main/java/io/leavesfly/joder/tools/ToolRegistry.java:42
    // TODO: 实现工具热重载功能
 
-📄 src/main/java/io/shareai/joder/services/model/ModelAdapter.java:87
+📄 src/main/java/io/leavesfly/joder/services/model/ModelAdapter.java:87
    // TODO: 添加流式响应支持
 ...
 ```
@@ -423,7 +423,7 @@ print(f"Hello, World! 当前时间：{datetime.now()}")
 > 显示 src/main/java 的目录结构
 
 [AI 调用 file_tree 工具]
-📁 src/main/java/io/shareai/joder/
+📁 src/main/java/io/leavesfly/joder/
 ├── cli/
 │   ├── commands/
 │   ├── Command.java

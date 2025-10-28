@@ -445,7 +445,7 @@ java -jar target/joder-1.0.0.jar
 **方式 2：使用 Maven**
 
 ```bash
-mvn exec:java -Dexec.mainClass="io.shareai.joder.JoderApplication"
+mvn exec:java -Dexec.mainClass="io.leavesfly.joder.JoderApplication"
 ```
 
 **方式 3：使用启动脚本**
@@ -579,7 +579,7 @@ if __name__ == "__main__":
 #### 读取和分析文件
 
 ```bash
-> 分析一下 @src/main/java/io/shareai/joder/JoderApplication.java 的代码结构
+> 分析一下 @src/main/java/io/leavesfly/joder/JoderApplication.java 的代码结构
 
 [🔧 AI 读取文件并分析]
 
@@ -616,17 +616,17 @@ graph TD
 
 📄 **找到 12 个 TODO 标注：**
 
-1. 📍 **src/main/java/io/shareai/joder/tools/ToolRegistry.java:42**
+1. 📍 **src/main/java/io/leavesfly/joder/tools/ToolRegistry.java:42**
    ```java
    // TODO: 实现工具热重载功能
    ```
 
-2. 📍 **src/main/java/io/shareai/joder/services/model/ModelAdapter.java:87**
+2. 📍 **src/main/java/io/leavesfly/joder/services/model/ModelAdapter.java:87**
    ```java
    // TODO: 添加流式响应支持
    ```
 
-3. 📍 **src/main/java/io/shareai/joder/cli/CommandParser.java:156**
+3. 📍 **src/main/java/io/leavesfly/joder/cli/CommandParser.java:156**
    ```java
    // TODO: 支持命令自动补全
    ```
@@ -867,7 +867,7 @@ joder {
 使用 Agent：
 ```
 > /agents use code-reviewer
-> 请审查 @src/main/java/io/shareai/joder/tools/ToolRegistry.java
+> 请审查 @src/main/java/io/leavesfly/joder/tools/ToolRegistry.java
 ```
 
 ### 自定义命令
@@ -969,29 +969,29 @@ mvn test jacoco:report
 1. 创建工具类，继承 `AbstractTool`：
 
 ```java
-package io.shareai.joder.tools.mytool;
+package io.leavesfly.joder.tools.mytool;
 
-import io.shareai.joder.tools.AbstractTool;
-import io.shareai.joder.tools.ToolResult;
+import tools.io.leavesfly.joder.AbstractTool;
+import tools.io.leavesfly.joder.ToolResult;
 import com.fasterxml.jackson.databind.JsonNode;
 
 public class MyTool extends AbstractTool {
-    
+
     @Override
     public String getName() {
         return "my_tool";
     }
-    
+
     @Override
     public String getDescription() {
         return "My custom tool description";
     }
-    
+
     @Override
     public JsonNode getParametersSchema() {
         // 返回 JSON Schema
     }
-    
+
     @Override
     protected ToolResult executeInternal(JsonNode arguments) {
         // 实现工具逻辑
@@ -1011,7 +1011,7 @@ toolRegistry.registerTool(new MyTool(workingDirectory));
 1. 创建命令类，实现 `Command` 接口：
 
 ```java
-package io.shareai.joder.cli.commands;
+package io.leavesfly.joder.cli.commands;
 
 public class MyCommand implements Command {
     

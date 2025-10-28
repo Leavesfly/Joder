@@ -1,0 +1,195 @@
+package io.leavesfly.joder.core;
+
+import io.leavesfly.joder.domain.Message;
+import io.leavesfly.joder.domain.MessageRole;
+import io.leavesfly.joder.tools.ToolRegistry;
+import io.leavesfly.joder.ui.components.MessageRenderer;
+import io.leavesfly.joder.services.context.ContextCompressor;
+import io.leavesfly.joder.services.memory.ProjectMemoryManager;
+import io.leavesfly.joder.services.model.MockModelAdapter;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+/**
+ * MainLoop 单元测试
+ */
+class MainLoopTest {
+    
+    @Mock
+    private ToolRegistry toolRegistry;
+    
+    @Mock
+    private MessageRenderer messageRenderer;
+    
+    @Mock
+    private ProjectMemoryManager projectMemoryManager;
+    
+    @Mock
+    private ContextCompressor contextCompressor;
+    
+    private MainLoop mainLoop;
+    
+    @BeforeEach
+    void setUp() {
+        MockitoAnnotations.openMocks(this);
+        mainLoop = new MainLoop(toolRegistry, messageRenderer, projectMemoryManager, contextCompressor);
+        mainLoop.setCurrentModel(new MockModelAdapter());
+    }
+    
+    @Test
+    void testProcessUserInput() {
+        // Given
+        String userInput = "Hello, AI!";
+        
+        // When
+        Message response = mainLoop.processUserInput(userInput);
+        
+        // Then
+        assertNotNull(response, "Response should not be null");
+        Assertions.assertEquals(MessageRole.ASSISTANT, response.getRole(), "Response role should be ASSISTANT");
+        assertEquals(2, mainLoop.getHistorySize(), "History should contain 2 messages (user + assistant)");
+    }
+    
+    @Test
+    void testMessageHistoryManagement() {
+        // When
+        mainLoop.processUserInput("First message");
+        mainLoop.processUserInput("Second message");
+        
+        // Then
+        assertEquals(4, mainLoop.getHistorySize(), "History should contain 4 messages");
+        
+        var history = mainLoop.getMessageHistory();
+        assertEquals(MessageRole.USER, history.get(0).getRole());
+        assertEquals(MessageRole.ASSISTANT, history.get(1).getRole());
+        assertEquals(MessageRole.USER, history.get(2).getRole());
+        assertEquals(MessageRole.ASSISTANT, history.get(3).getRole());
+    }
+    
+    @Test
+    void testUndoLastInteraction() {
+        // Given
+        mainLoop.processUserInput("Test message");
+        assertEquals(2, mainLoop.getHistorySize());
+        
+        // When
+        boolean undone = mainLoop.undoLastInteraction();
+        
+        // Then
+        assertTrue(undone, "Undo should succeed");
+        assertEquals(0, mainLoop.getHistorySize(), "History should be empty after undo");
+    }
+    
+    @Test
+    void testUndoWithInsufficientHistory() {
+        // Given - empty history
+        
+        // When
+        boolean undone = mainLoop.undoLastInteraction();
+        
+        // Then
+        assertFalse(undone, "Undo should fail with empty history");
+    }
+    
+    @Test
+    void testClearHistory() {
+        // Given
+        mainLoop.processUserInput("Test 1");
+        mainLoop.processUserInput("Test 2");
+        assertEquals(4, mainLoop.getHistorySize());
+        
+        // When
+        mainLoop.clearHistory();
+        
+        // Then
+        assertEquals(0, mainLoop.getHistorySize(), "History should be empty after clear");
+    }
+    
+    @Test
+    void testRemoveLastMessages() {
+        // Given
+        mainLoop.processUserInput("Message 1");
+        mainLoop.processUserInput("Message 2");
+        mainLoop.processUserInput("Message 3");
+        assertEquals(6, mainLoop.getHistorySize());
+        
+        // When
+        mainLoop.removeLastMessages(2);
+        
+        // Then
+        assertEquals(4, mainLoop.getHistorySize(), "Should have removed 2 messages");
+    }
+    
+    @Test
+    void testSystemPromptManagement() {
+        // Given
+        String prompt = "You are a helpful assistant.";
+        
+        // When
+        mainLoop.setSystemPrompt(prompt);
+        
+        // Then
+        assertEquals(prompt, mainLoop.getSystemPrompt());
+        
+        // When appending
+        mainLoop.appendSystemPrompt("Additional instruction.");
+        
+        // Then
+        assertTrue(mainLoop.getSystemPrompt().contains(prompt));
+        assertTrue(mainLoop.getSystemPrompt().contains("Additional instruction."));
+    }
+    
+    @Test
+    void testLoadProjectMemory() {
+        // Given
+        when(projectMemoryManager.exists()).thenReturn(true);
+        when(projectMemoryManager.load()).thenReturn("# Project Memory\n\nTest content");
+        
+        mainLoop.setSystemPrompt("Initial prompt");
+        
+        // When
+        mainLoop.loadProjectMemory();
+        
+        // Then
+        String systemPrompt = mainLoop.getSystemPrompt();
+        assertTrue(systemPrompt.contains("<project_memory>"), "Should contain project memory tag");
+        assertTrue(systemPrompt.contains("Test content"), "Should contain memory content");
+        assertTrue(systemPrompt.contains("Initial prompt"), "Should preserve initial prompt");
+        
+        verify(projectMemoryManager).exists();
+        verify(projectMemoryManager).load();
+    }
+    
+    @Test
+    void testLoadProjectMemoryWhenNotExists() {
+        // Given
+        when(projectMemoryManager.exists()).thenReturn(false);
+        
+        // When
+        mainLoop.loadProjectMemory();
+        
+        // Then
+        verify(projectMemoryManager).exists();
+        verify(projectMemoryManager, never()).load();
+    }
+    
+    @Test
+    void testMessageHistoryIsImmutable() {
+        // Given
+        mainLoop.processUserInput("Test");
+        
+        // When
+        var history = mainLoop.getMessageHistory();
+        
+        // Then
+        assertThrows(UnsupportedOperationException.class, () -> {
+            history.add(new Message(MessageRole.USER, "Should fail"));
+        }, "History from getMessageHistory() should be unmodifiable");
+    }
+}

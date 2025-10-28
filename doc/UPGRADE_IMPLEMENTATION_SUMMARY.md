@@ -10,7 +10,7 @@
 
 ### 1. 重构主循环,实现单一消息历史管理机制
 
-**实现文件**: `/src/main/java/io/shareai/joder/core/MainLoop.java`
+**实现文件**: `/src/main/java/io/leavesfly/joder/core/MainLoop.java`
 
 **核心特性**:
 - ✅ 维护单一消息历史列表,避免复杂的消息分支
@@ -40,8 +40,8 @@ public List<Message> getMessageHistory()
 ### 2. 实现 claude.md 项目记忆生成和加载机制
 
 **实现文件**: 
-- `/src/main/java/io/shareai/joder/services/memory/ProjectMemoryManager.java`
-- `/src/main/java/io/shareai/joder/services/memory/ProjectAnalyzer.java`
+- `/src/main/java/io/leavesfly/joder/services/memory/ProjectMemoryManager.java`
+- `/src/main/java/io/leavesfly/joder/services/memory/ProjectAnalyzer.java`
 
 **核心特性**:
 - ✅ 自动生成 `.joder/claude.md` 项目记忆文件
@@ -112,9 +112,9 @@ Joder/
 #### 4. **实现上下文压缩逻辑** ✅
 
 **实现文件**:
-- `/src/main/java/io/shareai/joder/services/context/ContextCompressor.java` (289行)
-- `/src/main/java/io/shareai/joder/services/context/CompressionResult.java` (80行)
-- `/src/main/java/io/shareai/joder/services/context/TokenCounter.java` (125行)
+- `/src/main/java/io/leavesfly/joder/services/context/ContextCompressor.java` (289行)
+- `/src/main/java/io/leavesfly/joder/services/context/CompressionResult.java` (80行)
+- `/src/main/java/io/leavesfly/joder/services/context/TokenCounter.java` (125行)
 
 **核心特性**:
 - ✅ 当上下文超过60%阈值时自动触发压缩
@@ -161,9 +161,9 @@ joder.context {
 #### 5. **添加三种对话模式切换** ✅
 
 **实现文件**:
-- `/src/main/java/io/shareai/joder/core/InteractionMode.java` (110行)
-- `/src/main/java/io/shareai/joder/cli/commands/ModeCommand.java` (130行)
-- 增强 `/src/main/java/io/shareai/joder/core/MainLoop.java`
+- `/src/main/java/io/leavesfly/joder/core/InteractionMode.java` (110行)
+- `/src/main/java/io/leavesfly/joder/cli/commands/ModeCommand.java` (130行)
+- 增强 `/src/main/java/io/leavesfly/joder/core/MainLoop.java`
 
 **三种模式**:
 
@@ -220,9 +220,9 @@ mode.isAuto()                   // Auto模式返回true
 ### 3. 引入轻量模型路由策略
 
 **实现文件**:
-- `/src/main/java/io/shareai/joder/services/model/ModelRouter.java`
-- `/src/main/java/io/shareai/joder/services/model/TaskType.java`
-- 增强 `/src/main/java/io/shareai/joder/services/model/ModelAdapterFactory.java`
+- `/src/main/java/io/leavesfly/joder/services/model/ModelRouter.java`
+- `/src/main/java/io/leavesfly/joder/services/model/TaskType.java`
+- 增强 `/src/main/java/io/leavesfly/joder/services/model/ModelAdapterFactory.java`
 
 **核心特性**:
 - ✅ 智能任务类型识别 (`TaskType` 枚举):

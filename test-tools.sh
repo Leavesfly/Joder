@@ -39,11 +39,11 @@ echo "✓ 检查新编译的工具类..."
 CLASSES_DIR="/Users/yefei.yf/Qoder/Kode/joder/target/classes"
 
 declare -a TOOL_CLASSES=(
-    "io/shareai/joder/tools/ls/LSTool.class"
-    "io/shareai/joder/tools/glob/GlobTool.class"
-    "io/shareai/joder/tools/grep/GrepTool.class"
-    "io/shareai/joder/tools/edit/FileEditTool.class"
-    "io/shareai/joder/tools/edit/MultiEditTool.class"
+    "io/leavesfly/joder/tools/ls/LSTool.class"
+    "io/leavesfly/joder/tools/glob/GlobTool.class"
+    "io/leavesfly/joder/tools/grep/GrepTool.class"
+    "io/leavesfly/joder/tools/edit/FileEditTool.class"
+    "io/leavesfly/joder/tools/edit/MultiEditTool.class"
 )
 
 for class in "${TOOL_CLASSES[@]}"; do
