@@ -30,8 +30,8 @@ public class ToolPermissionHook {
      */
     public PermissionResult canUseTool(Tool tool, Map<String, Object> input) {
         try {
-            // 使用权限管理器检查
-            boolean allowed = permissionManager.checkPermission(tool);
+            // 使用权限管理器检查（传入参数以支持参数预览）
+            boolean allowed = permissionManager.checkPermission(tool, input);
             
             if (allowed) {
                 return PermissionResult.allowed();

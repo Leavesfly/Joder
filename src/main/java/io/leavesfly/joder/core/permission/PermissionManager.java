@@ -2,12 +2,14 @@ package io.leavesfly.joder.core.permission;
 
 import io.leavesfly.joder.core.config.ConfigManager;
 import io.leavesfly.joder.tools.Tool;
+import io.leavesfly.joder.ui.permission.PermissionDialog;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -19,12 +21,16 @@ public class PermissionManager {
     private static final Logger logger = LoggerFactory.getLogger(PermissionManager.class);
     
     private final ConfigManager configManager;
+    private final PermissionDialog permissionDialog;
     private PermissionMode currentMode;
     private final Set<String> trustedTools;
     
     @Inject
-    public PermissionManager(ConfigManager configManager) {
+    public PermissionManager(
+            ConfigManager configManager,
+            PermissionDialog permissionDialog) {
         this.configManager = configManager;
+        this.permissionDialog = permissionDialog;
         this.currentMode = loadPermissionMode();
         this.trustedTools = new HashSet<>(
             configManager.getStringList("joder.permissions.trustedTools", java.util.List.of())
@@ -45,9 +51,10 @@ public class PermissionManager {
      * 检查工具是否可以执行
      * 
      * @param tool 要执行的工具
+     * @param input 工具参数
      * @return 是否允许执行
      */
-    public boolean checkPermission(Tool tool) {
+    public boolean checkPermission(Tool tool, Map<String, Object> input) {
         // 如果工具不需要权限确认，直接通过
         if (!tool.needsPermissions()) {
             return true;
@@ -81,45 +88,37 @@ public class PermissionManager {
         }
         
         // 需要用户确认
-        return requestUserConfirmation(tool);
+        return requestUserConfirmation(tool, input);
+    }
+    
+    /**
+     * 检查工具是否可以执行（兼容旧版）
+     */
+    public boolean checkPermission(Tool tool) {
+        return checkPermission(tool, null);
     }
     
     /**
      * 请求用户确认
      */
-    private boolean requestUserConfirmation(Tool tool) {
-        System.out.println("\n┌─────────────────────────────────────────┐");
-        System.out.println("│ 🔐 权限确认请求                         │");
-        System.out.println("├─────────────────────────────────────────┤");
-        System.out.println("│ 工具: " + tool.getName());
-        System.out.println("│ 描述: " + tool.getDescription());
-        System.out.println("│ 只读: " + (tool.isReadOnly() ? "是" : "否"));
-        System.out.println("├─────────────────────────────────────────┤");
-        System.out.print("│ 是否允许执行？[Y/n] ");
-        System.out.flush();
+    private boolean requestUserConfirmation(Tool tool, Map<String, Object> input) {
+        PermissionDialog.PermissionDecision decision = 
+            permissionDialog.requestPermission(tool, input);
         
-        try {
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(System.in)
-            );
-            String response = reader.readLine();
-            
-            boolean approved = response == null || response.trim().isEmpty() || 
-                             response.trim().equalsIgnoreCase("y") ||
-                             response.trim().equalsIgnoreCase("yes");
-            
-            if (approved) {
-                System.out.println("│ ✓ 已批准");
-            } else {
-                System.out.println("│ ✗ 已拒绝");
-            }
-            System.out.println("└─────────────────────────────────────────┘\n");
-            
-            return approved;
-            
-        } catch (Exception e) {
-            logger.error("Failed to read user confirmation", e);
-            return false;
+        switch (decision) {
+            case ALLOW_ONCE:
+                System.out.println("✅ 已批准（仅本次）");
+                return true;
+                
+            case ALLOW_PERMANENT:
+                addTrustedTool(tool.getName());
+                System.out.println("✅ 已永久批准");
+                return true;
+                
+            case DENY:
+            default:
+                System.out.println("❌ 已拒绝");
+                return false;
         }
     }
     

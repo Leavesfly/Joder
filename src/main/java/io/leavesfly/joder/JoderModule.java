@@ -29,8 +29,13 @@ import io.leavesfly.joder.services.oauth.TokenManager;
 import io.leavesfly.joder.services.reminder.SystemReminderService;
 import io.leavesfly.joder.core.config.ConfigManager;
 import io.leavesfly.joder.tools.ToolRegistry;
+import io.leavesfly.joder.tools.ToolExecutor;
 import io.leavesfly.joder.ui.renderer.DiffRenderer;
 import io.leavesfly.joder.ui.renderer.SyntaxHighlighter;
+import io.leavesfly.joder.ui.input.AdvancedInputHandler;
+import io.leavesfly.joder.ui.input.CompletionRenderer;
+import io.leavesfly.joder.ui.input.CancellationHandler;
+import io.leavesfly.joder.ui.permission.PermissionDialog;
 import io.leavesfly.joder.ui.style.OutputStyleManager;
 import io.leavesfly.joder.screens.ReplScreen;
 import io.leavesfly.joder.ui.components.MessageRenderer;
@@ -180,6 +185,14 @@ public class JoderModule extends AbstractModule {
         bind(SyntaxHighlighter.class).in(Singleton.class);
         bind(DiffRenderer.class).in(Singleton.class);
         
+        // UI 输入处理
+        bind(AdvancedInputHandler.class).in(Singleton.class);
+        bind(CompletionRenderer.class).in(Singleton.class);
+        bind(CancellationHandler.class).in(Singleton.class);
+        
+        // UI 权限对话框
+        bind(PermissionDialog.class).in(Singleton.class);
+        
         // Agents 系统
         bind(AgentsManager.class);
         
@@ -194,6 +207,9 @@ public class JoderModule extends AbstractModule {
         bind(TerminalSizeHook.class).in(Singleton.class);
         bind(UnifiedCompletionHook.class).in(Singleton.class);
         bind(CancelRequestHook.class).in(Singleton.class);
+        
+        // 工具执行器
+        bind(ToolExecutor.class).in(Singleton.class);
         
         // 工具系统 - 通过 Provider 提供
         bind(FileReadTool.class);

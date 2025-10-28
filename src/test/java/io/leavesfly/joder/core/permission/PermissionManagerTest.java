@@ -1,6 +1,7 @@
 package io.leavesfly.joder.core.permission;
 
 import io.leavesfly.joder.core.config.ConfigManager;
+import io.leavesfly.joder.ui.permission.PermissionDialog;
 import io.leavesfly.joder.tools.AbstractTool;
 import io.leavesfly.joder.tools.Tool;
 import io.leavesfly.joder.tools.ToolResult;
@@ -26,6 +27,9 @@ public class PermissionManagerTest {
     
     @Mock
     private ConfigManager configManager;
+    
+    @Mock
+    private PermissionDialog permissionDialog;
     
     private PermissionManager permissionManager;
     
@@ -76,7 +80,7 @@ public class PermissionManagerTest {
         when(configManager.getStringList("joder.permissions.trustedTools", List.of()))
             .thenReturn(List.of());
         
-        permissionManager = new PermissionManager(configManager);
+        permissionManager = new PermissionManager(configManager, permissionDialog);
     }
     
     @Test
@@ -215,7 +219,8 @@ public class PermissionManagerTest {
             .thenReturn(List.of());
         
         // Act
-        PermissionManager manager = new PermissionManager(configManager);
+        PermissionDialog dialog = mock(PermissionDialog.class);
+        PermissionManager manager = new PermissionManager(configManager, dialog);
         
         // Assert
         assertEquals(PermissionMode.PLAN, manager.getCurrentMode());
@@ -232,7 +237,8 @@ public class PermissionManagerTest {
             .thenReturn(trustedTools);
         
         // Act
-        PermissionManager manager = new PermissionManager(configManager);
+        PermissionDialog dialog = mock(PermissionDialog.class);
+        PermissionManager manager = new PermissionManager(configManager, dialog);
         Tool tool1 = new TestTool("Tool1", false, true);
         Tool tool2 = new TestTool("Tool2", false, true);
         

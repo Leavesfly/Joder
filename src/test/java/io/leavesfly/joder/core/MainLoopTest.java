@@ -10,6 +10,7 @@ import io.leavesfly.joder.services.model.MockModelAdapter;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.DisplayName;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -19,6 +20,7 @@ import static org.mockito.Mockito.*;
 /**
  * MainLoop 单元测试
  */
+@DisplayName("MainLoop 主控制循环测试")
 class MainLoopTest {
     
     @Mock
@@ -43,6 +45,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该正确处理用户输入")
     void testProcessUserInput() {
         // Given
         String userInput = "Hello, AI!";
@@ -57,6 +60,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该正确管理消息历史")
     void testMessageHistoryManagement() {
         // When
         mainLoop.processUserInput("First message");
@@ -73,6 +77,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该能撤销最后一轮对话")
     void testUndoLastInteraction() {
         // Given
         mainLoop.processUserInput("Test message");
@@ -87,6 +92,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("历史不足时撤销应该失败")
     void testUndoWithInsufficientHistory() {
         // Given - empty history
         
@@ -98,6 +104,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该能清空历史记录")
     void testClearHistory() {
         // Given
         mainLoop.processUserInput("Test 1");
@@ -112,6 +119,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该能移除最后N条消息")
     void testRemoveLastMessages() {
         // Given
         mainLoop.processUserInput("Message 1");
@@ -127,6 +135,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该能管理系统提示词")
     void testSystemPromptManagement() {
         // Given
         String prompt = "You are a helpful assistant.";
@@ -146,6 +155,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("应该能加载项目记忆")
     void testLoadProjectMemory() {
         // Given
         when(projectMemoryManager.exists()).thenReturn(true);
@@ -167,6 +177,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("项目记忆不存在时不应加载")
     void testLoadProjectMemoryWhenNotExists() {
         // Given
         when(projectMemoryManager.exists()).thenReturn(false);
@@ -180,6 +191,7 @@ class MainLoopTest {
     }
     
     @Test
+    @DisplayName("返回的消息历史应该是不可变的")
     void testMessageHistoryIsImmutable() {
         // Given
         mainLoop.processUserInput("Test");

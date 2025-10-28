@@ -14,6 +14,18 @@ import io.leavesfly.joder.services.model.ModelAdapter;
 import io.leavesfly.joder.services.model.ModelAdapterFactory;
 import io.leavesfly.joder.ui.components.MessageRenderer;
 import io.leavesfly.joder.ui.theme.ThemeManager;
+import io.leavesfly.joder.hooks.StartupTimeHook;
+import io.leavesfly.joder.hooks.MessageLogHook;
+import io.leavesfly.joder.hooks.CommandHistoryHook;
+import io.leavesfly.joder.hooks.NotifyAfterTimeoutHook;
+import io.leavesfly.joder.hooks.TerminalSizeHook;
+import io.leavesfly.joder.hooks.UnifiedCompletionHook;
+import io.leavesfly.joder.services.completion.CompletionService;
+import io.leavesfly.joder.services.completion.CompletionManager;
+import io.leavesfly.joder.services.completion.CommandCompletionProvider;
+import io.leavesfly.joder.services.completion.FileCompletionProvider;
+import io.leavesfly.joder.services.completion.ModelCompletionProvider;
+import io.leavesfly.joder.services.completion.CompletionSuggestion;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,6 +64,17 @@ public class ReplScreen {
     private final StyleCommand styleCommand;  // 新增
     private final BufferedReader reader;
     private final ModelCommand modelCommand;
+    private final StartupTimeHook startupTimeHook;
+    private final MessageLogHook messageLogHook;
+    private final CommandHistoryHook commandHistoryHook;
+    private final NotifyAfterTimeoutHook notifyAfterTimeoutHook;
+    private final TerminalSizeHook terminalSizeHook;
+    private final UnifiedCompletionHook unifiedCompletionHook;
+    private final CompletionService completionService;
+    private final CompletionManager completionManager;
+    private final CommandCompletionProvider commandCompletionProvider;
+    private final FileCompletionProvider fileCompletionProvider;
+    private final ModelCompletionProvider modelCompletionProvider;
     
     private boolean running;
     private ModelAdapter currentModel;
@@ -74,7 +97,18 @@ public class ReplScreen {
             ModeCommand modeCommand,
             UndoCommand undoCommand,
             RethinkCommand rethinkCommand,
-            StyleCommand styleCommand) {  // 新增
+            StyleCommand styleCommand,
+            StartupTimeHook startupTimeHook,
+            MessageLogHook messageLogHook,
+            CommandHistoryHook commandHistoryHook,
+            NotifyAfterTimeoutHook notifyAfterTimeoutHook,
+            TerminalSizeHook terminalSizeHook,
+            UnifiedCompletionHook unifiedCompletionHook,
+            CompletionService completionService,
+            CompletionManager completionManager,
+            CommandCompletionProvider commandCompletionProvider,
+            FileCompletionProvider fileCompletionProvider,
+            ModelCompletionProvider modelCompletionProvider) {  // 新增 Hooks 依赖与补全服务
         this.configManager = configManager;
         this.themeManager = themeManager;
         this.messageRenderer = messageRenderer;
@@ -92,6 +126,17 @@ public class ReplScreen {
         this.undoCommand = undoCommand;  // 新增
         this.rethinkCommand = rethinkCommand;  // 新增
         this.styleCommand = styleCommand;  // 新增
+        this.startupTimeHook = startupTimeHook;
+        this.messageLogHook = messageLogHook;
+        this.commandHistoryHook = commandHistoryHook;
+        this.notifyAfterTimeoutHook = notifyAfterTimeoutHook;
+        this.terminalSizeHook = terminalSizeHook;
+        this.unifiedCompletionHook = unifiedCompletionHook;
+        this.completionService = completionService;
+        this.completionManager = completionManager;
+        this.commandCompletionProvider = commandCompletionProvider;
+        this.fileCompletionProvider = fileCompletionProvider;
+        this.modelCompletionProvider = modelCompletionProvider;
         this.commandParser = new CommandParser();
         this.reader = new BufferedReader(new InputStreamReader(System.in));
         this.running = false;
@@ -114,6 +159,21 @@ public class ReplScreen {
         
         // 注册命令
         registerCommands();
+        
+        // 初始化补全系统
+        initializeCompletionSystem();
+    }
+    
+    /**
+     * 初始化补全系统
+     */
+    private void initializeCompletionSystem() {
+        // 注册补全提供者
+        completionManager.registerProvider(commandCompletionProvider);
+        completionManager.registerProvider(fileCompletionProvider);
+        completionManager.registerProvider(modelCompletionProvider);
+        
+        logger.info("补全系统已初始化，注册了 {} 个提供者", completionManager.getProviders().size());
     }
     
     /**
@@ -147,6 +207,18 @@ public class ReplScreen {
         // 加载项目记忆到主循环
         mainLoop.loadProjectMemory();
         
+        // 记录启动时间并感知终端尺寸
+        startupTimeHook.logStartupTime();
+        terminalSizeHook.updateSizeFromTput();
+        logger.info("终端尺寸: {}", terminalSizeHook.getSize().toString());
+        
+        // 启动超时提醒（无交互时定期提示）
+        notifyAfterTimeoutHook.startNotifyAfterTimeout(
+            "💡 提示：当前空闲，输入 /help 查看命令。",
+            30000,
+            msg -> System.out.println("\n" + msg)
+        );
+        
         // 显示欢迎信息
         displayWelcome();
         
@@ -164,6 +236,20 @@ public class ReplScreen {
                     // EOF (Ctrl+D)
                     break;
                 }
+                
+                // 更新交互时间并记录历史
+                notifyAfterTimeoutHook.updateLastInteractionTime();
+                if (input != null && !input.trim().isEmpty()) {
+                    commandHistoryHook.addToHistory(input);
+                    
+                    // 添加到补全服务的最近命令
+                    if (input.startsWith("/")) {
+                        completionService.addRecentCommand(input);
+                    }
+                }
+                
+                // 显示智能补全提示（如果输入类似命令前缀）
+                showCompletionHints(input);
                 
                 // 处理输入
                 handleInput(input);
@@ -227,6 +313,11 @@ public class ReplScreen {
             // 渲染 AI 响应
             System.out.println(messageRenderer.render(assistantMessage));
             
+            // 交互更新与消息日志持久化
+            notifyAfterTimeoutHook.updateLastInteractionTime();
+            messageLogHook.appendMessage(userMessage, "default", 0);
+            messageLogHook.appendMessage(assistantMessage, "default", 0);
+            
         } catch (Exception e) {
             logger.error("AI 响应失败", e);
             System.out.println(messageRenderer.renderError("AI 响应失败: " + e.getMessage()));
@@ -252,10 +343,39 @@ public class ReplScreen {
     }
     
     /**
+     * 显示智能补全提示
+     */
+    private void showCompletionHints(String input) {
+        if (input == null || input.trim().isEmpty()) {
+            return;
+        }
+        
+        String trimmed = input.trim();
+        
+        // 只对命令前缀（以 / 开头且不完整）显示提示
+        if (trimmed.startsWith("/") && !trimmed.contains(" ")) {
+            List<CompletionSuggestion> suggestions = completionManager.getCompletions(trimmed, trimmed.length());
+            
+            if (!suggestions.isEmpty() && suggestions.size() <= 5) {
+                System.out.println("\n💡 建议命令:");
+                for (int i = 0; i < Math.min(3, suggestions.size()); i++) {
+                    CompletionSuggestion suggestion = suggestions.get(i);
+                    System.out.printf("   /%s - %s\n", 
+                        suggestion.getText(), 
+                        suggestion.getDescription());
+                }
+                System.out.println();
+            }
+        }
+    }
+    
+    /**
      * 停止 REPL
      */
     public void stop() {
         running = false;
+        // 关闭超时提醒调度器
+        notifyAfterTimeoutHook.shutdown();
     }
     
     /**
