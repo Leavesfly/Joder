@@ -28,6 +28,13 @@ public class FileEditTool implements Tool {
     
     private final String workingDirectory;
     private final Map<String, Long> readFileTimestamps = new HashMap<>();
+    private final DiffGenerator diffGenerator = new DiffGenerator();
+    private final ConflictDetector conflictDetector = new ConflictDetector();
+    private final ThreeWayMerger threeWayMerger = new ThreeWayMerger();
+    private final LargeFileOptimizer largeFileOptimizer = new LargeFileOptimizer();
+    private boolean showDiff = true; // 是否显示diff预览
+    private boolean enableConflictDetection = true; // 是否启用冲突检测
+    private boolean enableThreeWayMerge = true; // 是否启用三方合并
     
     @Inject
     public FileEditTool(@WorkingDirectory String workingDirectory) {
@@ -233,7 +240,7 @@ public class FileEditTool implements Tool {
     }
     
     /**
-     * 编辑现有文件
+     * 编辑现有文件（增强版）
      */
     private ToolResult editExistingFile(Path filePath, String oldString, String newString) throws IOException {
         // 检测编码
@@ -242,23 +249,109 @@ public class FileEditTool implements Tool {
         // 读取原始内容
         String originalContent = Files.readString(filePath, encoding);
         
-        // 执行替换
-        String updatedContent = originalContent.replace(oldString, newString);
+        // 冲突检测
+        if (enableConflictDetection) {
+            ConflictDetector.ConflictResult conflictResult = conflictDetector.detectConflict(filePath);
+            
+            if (conflictResult.hasConflict()) {
+                logger.warn("检测到文件冲突: {}", conflictResult.getMessage());
+                
+                // 尝试三方合并
+                if (enableThreeWayMerge) {
+                    String currentContent = Files.readString(filePath, encoding);
+                    ThreeWayMerger.MergeResult mergeResult = threeWayMerger.merge(
+                        originalContent, currentContent, oldString, newString);
+                    
+                    if (mergeResult.isSuccess()) {
+                        logger.info("三方合并成功: {}", mergeResult.getMessage());
+                        // 使用合并后的内容
+                        Files.writeString(filePath, mergeResult.getMergedContent(), encoding);
+                        
+                        // 更新时间戳和快照
+                        FileTime newModifiedTime = Files.getLastModifiedTime(filePath);
+                        readFileTimestamps.put(filePath.toString(), newModifiedTime.toMillis());
+                        conflictDetector.updateSnapshot(filePath);
+                        
+                        logger.info("文件已编辑（通过三方合并）: {}", filePath);
+                        
+                        String preview = generatePreview(filePath.toString(), originalContent, oldString, newString);
+                        return ToolResult.success(String.format("✅ 文件已更新（三方合并）: %s\n合并信息: %s\n\n%s", 
+                            filePath, mergeResult.getMessage(), preview));
+                    } else {
+                        return ToolResult.error("文件冲突且无法自动合并: " + mergeResult.getMessage() + 
+                            "\n请先重新读取文件，或手动解决冲突后重试。");
+                    }
+                } else {
+                    return ToolResult.error("文件冲突: " + conflictResult.getMessage() + 
+                        "\n请先重新读取文件后重试。");
+                }
+            }
+        }
         
-        // 写入更新后的内容
+        // 大文件优化
+        if (largeFileOptimizer.isLargeFile(filePath)) {
+            logger.info("检测到大文件，使用优化处理: {}", filePath);
+            LargeFileOptimizer.EditResult editResult = largeFileOptimizer.editLargeFile(
+                filePath, oldString, newString, encoding);
+            
+            if (editResult.isSuccess()) {
+                // 更新时间戳和快照
+                FileTime newModifiedTime = Files.getLastModifiedTime(filePath);
+                readFileTimestamps.put(filePath.toString(), newModifiedTime.toMillis());
+                conflictDetector.updateSnapshot(filePath);
+                
+                logger.info("大文件已编辑: {}", filePath);
+                
+                String preview = generatePreview(filePath.toString(), originalContent, oldString, newString);
+                return ToolResult.success(String.format("✅ 大文件已更新: %s\n大小变化: %d -> %d 字节 (%+d)\n\n%s", 
+                    filePath, editResult.getOldSize(), editResult.getNewSize(), 
+                    editResult.getSizeDiff(), preview));
+            } else {
+                return ToolResult.error("大文件编辑失败: " + editResult.getMessage());
+            }
+        }
+        
+        // 标准编辑流程
+        String updatedContent = originalContent.replace(oldString, newString);
         Files.writeString(filePath, updatedContent, encoding);
         
-        // 更新时间戳
+        // 更新时间戳和快照
         FileTime newModifiedTime = Files.getLastModifiedTime(filePath);
         readFileTimestamps.put(filePath.toString(), newModifiedTime.toMillis());
+        conflictDetector.updateSnapshot(filePath);
         
         logger.info("文件已编辑: {}", filePath);
         
-        // 生成代码片段
-        String snippet = getSnippet(originalContent, oldString, newString);
+        // 生成预览信息
+        String preview = generatePreview(filePath.toString(), originalContent, oldString, newString);
         
-        return ToolResult.success(String.format("✅ 文件已更新: %s\n\n修改后的代码片段：\n%s", 
-            filePath, snippet));
+        return ToolResult.success(String.format("✅ 文件已更新: %s\n\n%s", 
+            filePath, preview));
+    }
+    
+    /**
+     * 生成编辑预览信息
+     */
+    private String generatePreview(String filePath, String originalContent, 
+                                   String oldString, String newString) {
+        StringBuilder preview = new StringBuilder();
+        
+        // 添加diff预览
+        if (showDiff) {
+            String sideBySideDiff = diffGenerator.generateSideBySideDiff(
+                originalContent, oldString, newString);
+            preview.append(sideBySideDiff);
+            
+            // 添加统计信息
+            String stats = diffGenerator.generateStats(oldString, newString);
+            preview.append("\n").append(stats).append("\n");
+        }
+        
+        // 添加传统的代码片段
+        String snippet = getSnippet(originalContent, oldString, newString);
+        preview.append("\n修改后的代码片段：\n").append(snippet);
+        
+        return preview.toString();
     }
     
     /**
@@ -324,10 +417,47 @@ public class FileEditTool implements Tool {
             if (Files.exists(path)) {
                 FileTime modifiedTime = Files.getLastModifiedTime(path);
                 readFileTimestamps.put(filePath, modifiedTime.toMillis());
+                // 同时记录冲突检测快照
+                conflictDetector.recordSnapshot(path);
             }
         } catch (IOException e) {
             logger.warn("记录文件读取时间失败: {}", filePath, e);
         }
+    }
+    
+    /**
+     * 设置是否显示diff预览
+     */
+    public void setShowDiff(boolean showDiff) {
+        this.showDiff = showDiff;
+    }
+    
+    /**
+     * 获取当前diff显示设置
+     */
+    public boolean isShowDiff() {
+        return this.showDiff;
+    }
+    
+    /**
+     * 设置是否启用冲突检测
+     */
+    public void setEnableConflictDetection(boolean enable) {
+        this.enableConflictDetection = enable;
+    }
+    
+    /**
+     * 设置是否启用三方合并
+     */
+    public void setEnableThreeWayMerge(boolean enable) {
+        this.enableThreeWayMerge = enable;
+    }
+    
+    /**
+     * 获取冲突检测器（用于测试）
+     */
+    ConflictDetector getConflictDetector() {
+        return conflictDetector;
     }
     
     @Override

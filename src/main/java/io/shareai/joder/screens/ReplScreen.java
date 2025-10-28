@@ -3,6 +3,7 @@ package io.shareai.joder.screens;
 import io.shareai.joder.cli.CommandParser;
 import io.shareai.joder.cli.CommandResult;
 import io.shareai.joder.cli.commands.*;
+import io.shareai.joder.core.MainLoop;
 import io.shareai.joder.core.config.ConfigManager;
 import io.shareai.joder.domain.Message;
 import io.shareai.joder.domain.MessageRole;
@@ -45,7 +46,11 @@ public class ReplScreen {
     private final AgentsCommand agentsCommand;
     private final ResumeCommand resumeCommand;
     private final LoginCommand loginCommand;
-    private final List<Message> messageHistory;
+    private final MainLoop mainLoop;  // 新增:主控制循环
+    private final ModeCommand modeCommand;  // 新增:模式切换命令
+    private final UndoCommand undoCommand;  // 新增
+    private final RethinkCommand rethinkCommand;  // 新增
+    private final io.shareai.joder.cli.commands.StyleCommand styleCommand;  // 新增
     private final BufferedReader reader;
     private final ModelCommand modelCommand;
     
@@ -65,7 +70,12 @@ public class ReplScreen {
             DoctorCommand doctorCommand,
             AgentsCommand agentsCommand,
             ResumeCommand resumeCommand,
-            LoginCommand loginCommand) {
+            LoginCommand loginCommand,
+            MainLoop mainLoop,
+            ModeCommand modeCommand,
+            UndoCommand undoCommand,
+            RethinkCommand rethinkCommand,
+            io.shareai.joder.cli.commands.StyleCommand styleCommand) {  // 新增
         this.configManager = configManager;
         this.themeManager = themeManager;
         this.messageRenderer = messageRenderer;
@@ -78,19 +88,29 @@ public class ReplScreen {
         this.agentsCommand = agentsCommand;
         this.resumeCommand = resumeCommand;
         this.loginCommand = loginCommand;
+        this.mainLoop = mainLoop;  // 新增
+        this.modeCommand = modeCommand;  // 新增
+        this.undoCommand = undoCommand;  // 新增
+        this.rethinkCommand = rethinkCommand;  // 新增
+        this.styleCommand = styleCommand;  // 新增
         this.commandParser = new CommandParser();
-        this.messageHistory = new ArrayList<>();
         this.reader = new BufferedReader(new InputStreamReader(System.in));
         this.running = false;
         
         // 初始化模型
         this.currentModel = modelAdapterFactory.createDefaultAdapter();
         
+        // 设置主循环的当前模型
+        this.mainLoop.setCurrentModel(this.currentModel);
+        
         // 创建模型命令
         this.modelCommand = new ModelCommand(
             modelAdapterFactory, 
             currentModel, 
-            model -> this.currentModel = model
+            model -> {
+                this.currentModel = model;
+                this.mainLoop.setCurrentModel(model);  // 同步到主循环
+            }
         );
         
         // 注册命令
@@ -105,12 +125,16 @@ public class ReplScreen {
         commandParser.registerCommand("clear", new ClearCommand());
         commandParser.registerCommand("config", new ConfigCommand(configManager));
         commandParser.registerCommand("model", modelCommand);
+        commandParser.registerCommand("mode", modeCommand);  // 新增
         commandParser.registerCommand("mcp", new McpCommand(mcpServerManager, mcpToolRegistry));
         commandParser.registerCommand("cost", costCommand);
         commandParser.registerCommand("doctor", doctorCommand);
         commandParser.registerCommand("agents", agentsCommand);
         commandParser.registerCommand("resume", resumeCommand);
         commandParser.registerCommand("login", loginCommand);
+        commandParser.registerCommand("undo", undoCommand);  // 新增
+        commandParser.registerCommand("rethink", rethinkCommand);  // 新增
+        commandParser.registerCommand("style", styleCommand);  // 新增
         commandParser.registerCommand("exit", new ExitCommand());
         commandParser.registerCommand("quit", new ExitCommand());
     }
@@ -120,6 +144,9 @@ public class ReplScreen {
      */
     public void start() {
         running = true;
+        
+        // 加载项目记忆到主循环
+        mainLoop.loadProjectMemory();
         
         // 显示欢迎信息
         displayWelcome();
@@ -184,26 +211,19 @@ public class ReplScreen {
      * 处理用户消息
      */
     private void handleUserMessage(String content) {
-        // 添加到消息历史
+        // 渲染用户消息(在添加到历史前显示)
         Message userMessage = new Message(MessageRole.USER, content);
-        messageHistory.add(userMessage);
-        
-        // 渲染用户消息
         System.out.println(messageRenderer.render(userMessage));
         
         try {
-            // 调用 AI 模型处理消息
+            // 调用主循环处理消息(自动管理消息历史)
             System.out.print("⚙️  AI 思考中...");
             System.out.flush();
             
-            String aiResponse = currentModel.sendMessage(messageHistory, "");
+            Message assistantMessage = mainLoop.processUserInput(content);
             
             // 清除思考提示
             System.out.print("\r                    \r");
-            
-            // 创建 AI 响应消息
-            Message assistantMessage = new Message(MessageRole.ASSISTANT, aiResponse);
-            messageHistory.add(assistantMessage);
             
             // 渲染 AI 响应
             System.out.println(messageRenderer.render(assistantMessage));
@@ -243,6 +263,6 @@ public class ReplScreen {
      * 获取消息历史
      */
     public List<Message> getMessageHistory() {
-        return new ArrayList<>(messageHistory);
+        return mainLoop.getMessageHistoryCopy();
     }
 }

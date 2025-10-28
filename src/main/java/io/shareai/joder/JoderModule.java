@@ -2,6 +2,7 @@ package io.shareai.joder;
 
 import com.google.inject.AbstractModule;
 import com.google.inject.Provides;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import io.shareai.joder.core.config.ConfigManager;
 import io.shareai.joder.screens.ReplScreen;
 import io.shareai.joder.ui.components.MessageRenderer;
@@ -15,6 +16,7 @@ import io.shareai.joder.tools.glob.GlobTool;
 import io.shareai.joder.tools.grep.GrepTool;
 import io.shareai.joder.tools.edit.FileEditTool;
 import io.shareai.joder.tools.edit.MultiEditTool;
+import io.shareai.joder.tools.edit.BatchEditTool;
 import io.shareai.joder.tools.think.ThinkTool;
 import io.shareai.joder.tools.todo.TodoWriteTool;
 import io.shareai.joder.tools.task.TaskTool;
@@ -30,6 +32,10 @@ import io.shareai.joder.tools.memory.MemoryWriteTool;
 import io.shareai.joder.tools.notebook.NotebookEditTool;
 import io.shareai.joder.tools.notebook.NotebookReadTool;
 import io.shareai.joder.tools.architect.ArchitectTool;
+import io.shareai.joder.tools.codebase.CodebaseSummaryTool;
+import io.shareai.joder.tools.search.SmartSearchTool;
+import io.shareai.joder.tools.search.SearchStrategyAnalyzer;
+import io.shareai.joder.tools.search.SearchExecutor;
 
 import javax.inject.Singleton;
 
@@ -53,10 +59,16 @@ public class JoderModule extends AbstractModule {
         // 基础配置
         bind(String.class).annotatedWith(WorkingDirectory.class).toInstance(workingDirectory);
         
+        // 核心控制流程
+        bind(io.shareai.joder.core.MainLoop.class).in(Singleton.class);
+        
         // UI 组件
         bind(ThemeManager.class);
         bind(MessageRenderer.class);
         bind(ReplScreen.class);
+        
+        // UI 样式管理
+        bind(io.shareai.joder.ui.style.OutputStyleManager.class).in(Singleton.class);
         
         // 权限管理
         bind(io.shareai.joder.core.permission.PermissionManager.class);
@@ -73,6 +85,10 @@ public class JoderModule extends AbstractModule {
         bind(io.shareai.joder.cli.commands.ReviewCommand.class);
         bind(io.shareai.joder.cli.commands.HistoryCommand.class);
         bind(io.shareai.joder.cli.commands.ExportCommand.class);
+        bind(io.shareai.joder.cli.commands.ModeCommand.class);
+        bind(io.shareai.joder.cli.commands.UndoCommand.class);
+        bind(io.shareai.joder.cli.commands.RethinkCommand.class);
+        bind(io.shareai.joder.cli.commands.StyleCommand.class);
         // Phase 7: 开发工具和其他命令
         bind(io.shareai.joder.cli.commands.ListenCommand.class);
         bind(io.shareai.joder.cli.commands.BenchmarkCommand.class);
@@ -90,6 +106,7 @@ public class JoderModule extends AbstractModule {
         // 模型系统
         bind(io.shareai.joder.services.model.ModelAdapterFactory.class);
         bind(io.shareai.joder.services.model.ModelPointerManager.class);
+        bind(io.shareai.joder.services.model.ModelRouter.class).in(Singleton.class);
         
         // 补全系统
         bind(io.shareai.joder.services.completion.CompletionManager.class);
@@ -118,6 +135,19 @@ public class JoderModule extends AbstractModule {
         // 系统提醒服务
         bind(io.shareai.joder.services.reminder.SystemReminderService.class).in(Singleton.class);
         
+        // 项目记忆管理
+        bind(io.shareai.joder.services.memory.ProjectMemoryManager.class).in(Singleton.class);
+        
+        // 上下文管理
+        bind(io.shareai.joder.services.context.TokenCounter.class).in(Singleton.class);
+        bind(io.shareai.joder.services.context.ContextCompressor.class).in(Singleton.class);
+        
+        // 缓存管理
+        bind(io.shareai.joder.services.cache.FileContentCache.class).in(Singleton.class);
+        
+        // 成本追踪
+        bind(io.shareai.joder.services.cost.CostTrackingService.class).in(Singleton.class);
+        
         // UI 渲染器
         bind(io.shareai.joder.ui.renderer.SyntaxHighlighter.class).in(Singleton.class);
         bind(io.shareai.joder.ui.renderer.DiffRenderer.class).in(Singleton.class);
@@ -142,6 +172,7 @@ public class JoderModule extends AbstractModule {
         bind(FileWriteTool.class);
         bind(FileEditTool.class);
         bind(MultiEditTool.class);
+        bind(BatchEditTool.class);
         bind(BashTool.class);
         bind(LSTool.class);
         bind(GlobTool.class);
@@ -161,6 +192,12 @@ public class JoderModule extends AbstractModule {
         bind(NotebookEditTool.class);
         bind(NotebookReadTool.class);
         bind(ArchitectTool.class);
+        bind(CodebaseSummaryTool.class);
+        
+        // 智能搜索工具
+        bind(SearchStrategyAnalyzer.class).in(Singleton.class);
+        bind(SearchExecutor.class).in(Singleton.class);
+        bind(SmartSearchTool.class);
     }
     
     @Provides
@@ -171,15 +208,23 @@ public class JoderModule extends AbstractModule {
     
     @Provides
     @Singleton
+    ObjectMapper provideObjectMapper() {
+        return new ObjectMapper();
+    }
+    
+    @Provides
+    @Singleton
     ToolRegistry provideToolRegistry(
         FileReadTool fileReadTool,
         FileWriteTool fileWriteTool,
         FileEditTool fileEditTool,
         MultiEditTool multiEditTool,
+        BatchEditTool batchEditTool,
         BashTool bashTool,
         LSTool lsTool,
         GlobTool globTool,
         GrepTool grepTool,
+        SmartSearchTool smartSearchTool,
         ThinkTool thinkTool,
         TodoWriteTool todoWriteTool,
         TaskTool taskTool,
@@ -195,6 +240,7 @@ public class JoderModule extends AbstractModule {
         NotebookEditTool notebookEditTool,
         NotebookReadTool notebookReadTool,
         ArchitectTool architectTool,
+        CodebaseSummaryTool codebaseSummaryTool,
         io.shareai.joder.services.mcp.McpServerManager mcpServerManager,
         io.shareai.joder.services.mcp.McpToolRegistry mcpToolRegistry
     ) {
@@ -205,6 +251,7 @@ public class JoderModule extends AbstractModule {
         registry.registerTool(fileWriteTool);
         registry.registerTool(fileEditTool);
         registry.registerTool(multiEditTool);
+        registry.registerTool(batchEditTool);
         
         // 注册系统工具
         registry.registerTool(bashTool);
@@ -213,6 +260,7 @@ public class JoderModule extends AbstractModule {
         registry.registerTool(lsTool);
         registry.registerTool(globTool);
         registry.registerTool(grepTool);
+        registry.registerTool(smartSearchTool);
         
         // 注册 P1 工具
         registry.registerTool(thinkTool);
@@ -236,6 +284,7 @@ public class JoderModule extends AbstractModule {
         registry.registerTool(notebookEditTool);
         registry.registerTool(notebookReadTool);
         registry.registerTool(architectTool);
+        registry.registerTool(codebaseSummaryTool);
         
         // 配置 MCP 管理器
         registry.setMcpManagers(mcpServerManager, mcpToolRegistry);

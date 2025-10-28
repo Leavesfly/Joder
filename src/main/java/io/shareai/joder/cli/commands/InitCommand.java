@@ -6,6 +6,7 @@ import com.typesafe.config.ConfigRenderOptions;
 import io.shareai.joder.cli.Command;
 import io.shareai.joder.cli.CommandResult;
 import io.shareai.joder.core.config.ConfigManager;
+import io.shareai.joder.services.memory.ProjectMemoryManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -25,10 +26,12 @@ public class InitCommand implements Command {
     private static final Logger logger = LoggerFactory.getLogger(InitCommand.class);
     
     private final ConfigManager configManager;
+    private final ProjectMemoryManager projectMemoryManager;
     
     @Inject
-    public InitCommand(ConfigManager configManager) {
+    public InitCommand(ConfigManager configManager, ProjectMemoryManager projectMemoryManager) {
         this.configManager = configManager;
+        this.projectMemoryManager = projectMemoryManager;
     }
     
     @Override
@@ -80,16 +83,26 @@ public class InitCommand implements Command {
                 output.append("⊙ .gitignore 已包含 .joder/ 规则\n");
             }
             
-            // 4. 扫描项目结构
+            // 4. 初始化项目记忆 (claude.md)
+            if (!projectMemoryManager.exists()) {
+                projectMemoryManager.initialize(false);
+                output.append("✓ 创建项目记忆文件: .joder/claude.md\n");
+                logger.info("Created project memory file");
+            } else {
+                output.append("⊚ 项目记忆文件已存在: .joder/claude.md\n");
+            }
+            
+            // 5. 扫描项目结构
             output.append("\n📁 项目结构扫描:\n");
             ProjectInfo projectInfo = scanProjectStructure(projectRoot);
             output.append(projectInfo.getSummary());
             
-            // 5. 显示配置建议
+            // 6. 显示配置建议
             output.append("\n💡 配置建议:\n");
             output.append("  1. 编辑 .joder/config.conf 配置模型 API Key\n");
-            output.append("  2. 运行 /model 命令配置默认模型\n");
-            output.append("  3. 运行 /doctor 命令检查环境配置\n");
+            output.append("  2. 编辑 .joder/claude.md 添加项目具体信息、规范和偏好\n");
+            output.append("  3. 运行 /model 命令配置默认模型\n");
+            output.append("  4. 运行 /doctor 命令检查环境配置\n");
             
             output.append("\n✅ 项目初始化完成！\n");
             

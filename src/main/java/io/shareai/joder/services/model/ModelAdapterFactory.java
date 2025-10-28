@@ -63,6 +63,30 @@ public class ModelAdapterFactory {
         };
     }
     
+    /**
+     * 根据模型指针创建适配器
+     * <p>
+     * 模型指针在配置中定义 (joder.model.pointers),
+     * 可以将逻辑角色映射到具体模型
+     * </p>
+     * 
+     * @param pointer 指针名称 (main/task/quick/reasoning)
+     * @return 模型适配器
+     */
+    public ModelAdapter createAdapterByPointer(String pointer) {
+        String pointerPath = "joder.model.pointers." + pointer;
+        
+        if (!configManager.hasPath(pointerPath)) {
+            logger.warn("Model pointer not found: {}, using default model", pointer);
+            return createDefaultAdapter();
+        }
+        
+        String modelName = configManager.getString(pointerPath);
+        logger.debug("Resolving pointer {} to model {}", pointer, modelName);
+        
+        return createAdapter(modelName);
+    }
+    
     private ModelAdapter createClaudeAdapter(String modelName) {
         String profilePath = "joder.model.profiles." + modelName;
         logger.info("Creating Claude adapter for model: {}", modelName);
