@@ -15,6 +15,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.concurrent.Callable;
 
 /**
@@ -45,9 +48,9 @@ public class JoderApplication implements Callable<Integer> {
     public static void main(String[] args) {
         // 设置日志目录
         String logDir = System.getProperty("user.home") + "/.local/share/joder/logs";
-        java.nio.file.Path logPath = java.nio.file.Paths.get(logDir);
+        Path logPath = Paths.get(logDir);
         try {
-            java.nio.file.Files.createDirectories(logPath);
+            Files.createDirectories(logPath);
         } catch (IOException e) {
             System.err.println("Failed to create log directory: " + e.getMessage());
         }
