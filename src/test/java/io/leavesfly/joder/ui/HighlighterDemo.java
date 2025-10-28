@@ -1,4 +1,4 @@
-package io.leavesfly.joder.examples;
+package io.leavesfly.joder.ui;
 
 import io.leavesfly.joder.ui.renderer.DiffRenderer;
 import io.leavesfly.joder.ui.renderer.SyntaxHighlighter;
