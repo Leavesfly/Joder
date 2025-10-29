@@ -3,7 +3,9 @@ package io.leavesfly.joder.cli.commands;
 import io.leavesfly.joder.cli.Command;
 import io.leavesfly.joder.cli.CommandResult;
 import io.leavesfly.joder.domain.AgentConfig;
+import io.leavesfly.joder.domain.Message;
 import io.leavesfly.joder.services.agents.AgentsManager;
+import io.leavesfly.joder.services.agents.AgentExecutor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,10 +24,12 @@ public class AgentsCommand implements Command {
     private static final Logger logger = LoggerFactory.getLogger(AgentsCommand.class);
     
     private final AgentsManager agentsManager;
+    private final AgentExecutor agentExecutor;
     
     @Inject
-    public AgentsCommand(AgentsManager agentsManager) {
+    public AgentsCommand(AgentsManager agentsManager, AgentExecutor agentExecutor) {
         this.agentsManager = agentsManager;
+        this.agentExecutor = agentExecutor;
     }
     
     @Override
@@ -35,7 +39,12 @@ public class AgentsCommand implements Command {
     
     @Override
     public String getUsage() {
-        return "/agents - 列出和管理代理配置";
+        return "/agents - 列出和管理代理配置\n" +
+               "  /agents list              - 列出所有代理\n" +
+               "  /agents show <name>       - 查看代理详情\n" +
+               "  /agents run <name> <task> - 运行指定代理\n" +
+               "  /agents init [project]    - 初始化代理目录\n" +
+               "  /agents reload            - 重新加载代理配置";
     }
     
     @Override
@@ -51,6 +60,7 @@ public class AgentsCommand implements Command {
             return switch (subCommand.toLowerCase()) {
                 case "list", "" -> listAgents();
                 case "show" -> showAgent(subArgs);
+                case "run" -> runAgent(subArgs);
                 case "init" -> initAgents(subArgs);
                 case "reload" -> reloadAgents();
                 default -> CommandResult.error("未知子命令: " + subCommand + ". 使用 /agents help 查看帮助。");
@@ -109,9 +119,10 @@ public class AgentsCommand implements Command {
         }
         
         output.append("💡 使用提示:\n");
-        output.append("  /agents show <name>  - 查看代理详情\n");
-        output.append("  /agents init         - 初始化代理目录\n");
-        output.append("  /agents reload       - 重新加载代理配置\n");
+        output.append("  /agents show <name>      - 查看代理详情\n");
+        output.append("  /agents run <name> <task> - 运行指定代理\n");
+        output.append("  /agents init             - 初始化代理目录\n");
+        output.append("  /agents reload           - 重新加载代理配置\n");
         
         return CommandResult.success(output.toString());
     }
@@ -139,6 +150,47 @@ public class AgentsCommand implements Command {
                 .map(this::formatAgentDetails)
                 .map(CommandResult::success)
                 .orElse(CommandResult.error("未找到代理: " + name));
+    }
+    
+    /**
+     * 运行代理
+     */
+    private CommandResult runAgent(String args) {
+        if (args == null || args.trim().isEmpty()) {
+            return CommandResult.error("请指定代理名称和任务: /agents run <name> <task>");
+        }
+        
+        // 解析代理名称和任务
+        String[] parts = args.split("\\s+", 2);
+        if (parts.length < 2) {
+            return CommandResult.error("请指定任务内容: /agents run <name> <task>");
+        }
+        
+        String agentName = parts[0].trim();
+        String task = parts[1].trim();
+        
+        // 验证代理是否存在
+        if (!agentExecutor.hasAgent(agentName)) {
+            return CommandResult.error("未找到代理: " + agentName);
+        }
+        
+        try {
+            // 执行代理
+            Message result = agentExecutor.execute(agentName, task);
+            
+            // 格式化输出
+            StringBuilder output = new StringBuilder();
+            output.append("🤖 Agent: ").append(agentName).append("\n\n");
+            output.append("📝 任务: ").append(task).append("\n\n");
+            output.append("─── 执行结果 ───\n\n");
+            output.append(result.getContent());
+            
+            return CommandResult.success(output.toString());
+            
+        } catch (Exception e) {
+            logger.error("Failed to run agent: {}", agentName, e);
+            return CommandResult.error("Agent 执行失败: " + e.getMessage());
+        }
     }
     
     /**

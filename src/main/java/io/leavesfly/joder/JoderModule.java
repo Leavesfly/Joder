@@ -8,6 +8,7 @@ import io.leavesfly.joder.core.MainLoop;
 import io.leavesfly.joder.core.permission.PermissionManager;
 import io.leavesfly.joder.hooks.*;
 import io.leavesfly.joder.services.agents.AgentsManager;
+import io.leavesfly.joder.services.agents.AgentExecutor;
 import io.leavesfly.joder.services.cache.FileContentCache;
 import io.leavesfly.joder.services.commands.CustomCommandService;
 import io.leavesfly.joder.services.completion.*;
@@ -195,6 +196,7 @@ public class JoderModule extends AbstractModule {
         
         // Agents 系统
         bind(AgentsManager.class);
+        bind(AgentExecutor.class).in(Singleton.class);
         
         // Hooks 系统
         bind(ApiKeyVerificationHook.class).in(Singleton.class);
