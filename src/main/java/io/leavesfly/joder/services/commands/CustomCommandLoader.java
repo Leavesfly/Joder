@@ -18,15 +18,15 @@ import java.util.stream.Stream;
  * <p>从指定目录扫描并加载 Markdown 格式的自定义命令文件。
  * 支持以下目录（按优先级排序）：
  * <ol>
- *   <li>项目级 Kode 命令：{project}/.kode/commands/</li>
+ *   <li>项目级 Kode 命令：{project}/.joder/commands/</li>
  *   <li>项目级 Claude 命令：{project}/.claude/commands/</li>
- *   <li>用户级 Kode 命令：~/.kode/commands/</li>
+ *   <li>用户级 Kode 命令：~/.joder/commands/</li>
  *   <li>用户级 Claude 命令：~/.claude/commands/</li>
  * </ol>
  * 
  * <p>目录结构支持命名空间：
  * <pre>
- * .kode/commands/
+ * .joder/commands/
  * ├── test.md              -> project:test
  * └── development/
  *     └── build.md         -> project:development:build
@@ -61,12 +61,12 @@ public class CustomCommandLoader {
         List<CustomCommand> commands = new ArrayList<>();
         
         // 项目级目录（优先级更高）
-        Path projectKodeDir = Paths.get(workingDirectory, ".kode", "commands");
+        Path projectKodeDir = Paths.get(workingDirectory, ".joder", "commands");
         Path projectClaudeDir = Paths.get(workingDirectory, ".claude", "commands");
         
         // 用户级目录
         String userHome = System.getProperty("user.home");
-        Path userKodeDir = Paths.get(userHome, ".kode", "commands");
+        Path userKodeDir = Paths.get(userHome, ".joder", "commands");
         Path userClaudeDir = Paths.get(userHome, ".claude", "commands");
         
         // 按优先级加载（项目 > 用户，Kode > Claude）
@@ -167,8 +167,8 @@ public class CustomCommandLoader {
      * 
      * <p>示例：
      * <ul>
-     *   <li>.kode/commands/test.md -> project:test</li>
-     *   <li>.kode/commands/dev/build.md -> project:dev:build</li>
+     *   <li>.joder/commands/test.md -> project:test</li>
+     *   <li>.joder/commands/dev/build.md -> project:dev:build</li>
      * </ul>
      */
     private String generateCommandName(Path filePath, Path baseDirectory, CustomCommand.CommandScope scope) {

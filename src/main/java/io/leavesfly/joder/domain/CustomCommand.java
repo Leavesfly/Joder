@@ -90,9 +90,9 @@ public class CustomCommand {
      * 命令作用域枚举
      */
     public enum CommandScope {
-        /** 用户级命令（~/.claude/commands 或 ~/.kode/commands） */
+        /** 用户级命令（~/.claude/commands 或 ~/.joder/commands） */
         USER,
-        /** 项目级命令（{project}/.claude/commands 或 {project}/.kode/commands） */
+        /** 项目级命令（{project}/.claude/commands 或 {project}/.joder/commands） */
         PROJECT
     }
     

@@ -171,7 +171,7 @@ public class ConfigUtils {
      */
     public static String getProjectConfigFile(String projectPath) {
         String userHome = System.getProperty("user.home");
-        return userHome + "/.kode/projects/" + projectPath.replace("/", "_") + ".json";
+        return userHome + "/.joder/projects/" + projectPath.replace("/", "_") + ".json";
     }
 
     /**
@@ -179,7 +179,7 @@ public class ConfigUtils {
      */
     public static String getGlobalConfigFile() {
         String userHome = System.getProperty("user.home");
-        return userHome + "/.kode/config.json";
+        return userHome + "/.joder/config.json";
     }
 
     /**

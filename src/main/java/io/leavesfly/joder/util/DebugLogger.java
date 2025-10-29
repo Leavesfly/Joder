@@ -50,7 +50,7 @@ public class DebugLogger {
 
     private static final String DEBUG_MODE = System.getenv("DEBUG");
     private static final String DEBUG_VERBOSE = System.getenv("DEBUG_VERBOSE");
-    private static final String KODE_DIR = System.getProperty("user.home") + "/.kode";
+    private static final String KODE_DIR = System.getProperty("user.home") + "/.joder";
     private static final Path DEBUG_BASE = Paths.get(KODE_DIR, "debug");
 
     private static final Map<String, Long> recentLogs = new ConcurrentHashMap<>();

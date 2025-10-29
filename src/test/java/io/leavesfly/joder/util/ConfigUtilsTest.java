@@ -79,14 +79,14 @@ public class ConfigUtilsTest {
     public void testProjectConfigFile() {
         String filePath = ConfigUtils.getProjectConfigFile("/home/user/project");
         assertNotNull(filePath);
-        assertTrue(filePath.contains(".kode"));
+        assertTrue(filePath.contains(".joder"));
     }
 
     @Test
     public void testGlobalConfigFile() {
         String filePath = ConfigUtils.getGlobalConfigFile();
         assertNotNull(filePath);
-        assertTrue(filePath.contains(".kode"));
+        assertTrue(filePath.contains(".joder"));
         assertTrue(filePath.endsWith("config.json"));
     }
 }
